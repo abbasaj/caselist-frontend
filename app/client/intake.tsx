@@ -1,62 +1,70 @@
 'use client';
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React from 'react';
+import QATile from '../../components/QATile';
+import Navbar from '../../components/Navbar';
 import { submitCase } from '../../lib/api';
 
 export default function Intake() {
-  const router = useRouter();
-  const [tiles, setTiles] = useState([
-    { question: 'Describe your case briefly', answer: '' },
-    { question: 'Preferred lawyer specialization', answer: '' },
-    { question: 'Budget range (USD)', answer: '' },
-  ]);
-  const [loading, setLoading] = useState(false);
+  const [answers, setAnswers] = React.useState<{ [key: string]: string }>({});
+  const [loading, setLoading] = React.useState(false);
+  const [submitted, setSubmitted] = React.useState(false);
+  const [caseId, setCaseId] = React.useState<number | null>(null);
 
-  const handleChange = (index: number, value: string) => {
-    const newTiles = [...tiles];
-    newTiles[index].answer = value;
-    setTiles(newTiles);
+  const questions = [
+    { q: 'Type of Case', options: ['Family', 'Criminal', 'Corporate'] },
+    { q: 'Urgency', options: ['Immediate', 'Within 1 week', 'Flexible'] },
+    { q: 'Preferred Lawyer Gender', options: ['Any', 'Male', 'Female'] },
+    { q: 'Budget', options: ['Low', 'Medium', 'High'] },
+  ];
+
+  const handleSelect = (question: string, option: string) => {
+    setAnswers((prev) => ({ ...prev, [question]: option }));
   };
 
   const handleSubmit = async () => {
     setLoading(true);
     try {
-      const caseData = tiles.reduce((acc, t) => ({ ...acc, [t.question]: t.answer }), {});
-      const result = await submitCase(caseData);
-      router.push(`/client/summary?id=${result.id}`);
+      const data = await submitCase(answers);
+      setCaseId(data.id);
+      setSubmitted(true);
     } catch (err) {
       console.error(err);
-      alert('Failed to submit case');
+      alert('Failed to submit case.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-4xl mx-auto mt-10 px-4">
-      <h1 className="text-4xl font-bold text-blue-600 mb-8">Start Your Case</h1>
-      <div className="grid gap-6">
-        {tiles.map((tile, idx) => (
-          <div key={idx} className="p-6 bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-transform transform hover:-translate-y-1">
-            <label className="block font-semibold mb-2 text-gray-900">{tile.question}</label>
-            <input
-              type="text"
-              value={tile.answer}
-              onChange={(e) => handleChange(idx, e.target.value)}
-              className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-              placeholder="Type your answer..."
-            />
-          </div>
+    <>
+      <Navbar />
+      <div className="max-w-4xl mx-auto mt-10 px-4">
+        <h1 className="text-3xl font-bold text-blue-600 mb-6">Client Intake</h1>
+
+        {questions.map((item) => (
+          <QATile
+            key={item.q}
+            question={item.q}
+            options={item.options}
+            selectedOption={answers[item.q]}
+            onSelect={(option) => handleSelect(item.q, option)}
+          />
         ))}
+
+        <button
+          onClick={handleSubmit}
+          disabled={loading || submitted}
+          className="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-2xl shadow-md hover:shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {loading ? 'Submitting...' : submitted ? 'Submitted' : 'Submit'}
+        </button>
+
+        {submitted && caseId && (
+          <p className="mt-4 text-green-600 font-medium">
+            Case submitted successfully! Case ID: {caseId}
+          </p>
+        )}
       </div>
-      <button
-        onClick={handleSubmit}
-        disabled={loading}
-        className="mt-6 w-full md:w-auto bg-blue-500 hover:bg-blue-600 text-white font-semibold px-8 py-3 rounded-xl shadow-lg transition"
-      >
-        {loading ? 'Submitting...' : 'Submit Case'}
-      </button>
-    </div>
+    </>
   );
 }
-
