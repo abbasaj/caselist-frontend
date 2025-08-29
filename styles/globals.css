@@ -2,3 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Smooth Pixel-like UI transitions */
+* {
+  transition: all 0.2s ease-in-out;
+}
